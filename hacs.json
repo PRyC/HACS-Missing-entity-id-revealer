@@ -1,0 +1,5 @@
+{
+  "name": "Show IDs of missing entities",
+  "filename": "entity-id-revealer.js",
+  "render_readme": true
+}
