@@ -11,7 +11,7 @@ When a Lovelace card cannot find an entity, instead of just **"Entity not found"
 1. Make sure [HACS](https://hacs.xyz/) is installed
 2. Go to **HACS → Frontend**
 3. Click three dots in the top right corner → **Custom repositories**
-4. Enter the repository URL (https://github.com/PRyC/HACS-Missing-entity-id-revealer/) and select category **Lovelace**
+4. Enter the repository URL (https://github.com/PRyC/HACS-Missing-entity-id-revealer/) and select category **Lovelace / Dashboard**
 5. Click **Add**
 6. Find **Entity ID Revealer** in the list and click **Download**
 7. **Refresh** the browser (hard refresh: Ctrl+F5 / Cmd+Shift+R)
