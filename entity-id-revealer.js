@@ -51,20 +51,6 @@
     }
   }
 
-  function scanNode(node) {
-    if (node.nodeType !== 1) return;
-    if (node.tagName === "HUI-WARNING" || node.tagName === "HUI-WARNING-ELEMENT") {
-      patchWarning(node);
-    }
-    if (node.shadowRoot) scanForWarnings(node.shadowRoot);
-    var warnings = node.querySelectorAll("hui-warning, hui-warning-element");
-    for (var i = 0; i < warnings.length; i++) patchWarning(warnings[i]);
-    var all = node.querySelectorAll("*");
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].shadowRoot) scanForWarnings(all[i].shadowRoot);
-    }
-  }
-
   function scanForWarnings(root) {
     var warnings = root.querySelectorAll("hui-warning, hui-warning-element");
     for (var i = 0; i < warnings.length; i++) patchWarning(warnings[i]);
@@ -73,17 +59,6 @@
       if (children[i].shadowRoot) scanForWarnings(children[i].shadowRoot);
     }
   }
-
-  var lightObserver = new MutationObserver(function (mutations) {
-    for (var i = 0; i < mutations.length; i++) {
-      var m = mutations[i];
-      if (m.type !== "childList") continue;
-      for (var j = 0; j < m.addedNodes.length; j++) {
-        scanNode(m.addedNodes[j]);
-      }
-    }
-  });
-  lightObserver.observe(document.body, { childList: true, subtree: true });
 
   function patchElement(name) {
     var cls = customElements.get(name);
@@ -113,6 +88,7 @@
   setTimeout(function () { scanForWarnings(document.body); }, 500);
   setTimeout(function () { scanForWarnings(document.body); }, 1500);
   setTimeout(function () { scanForWarnings(document.body); }, 3000);
+  setInterval(function () { scanForWarnings(document.body); }, 10000);
 
   window.__entityIdRevealerActive = true;
 })();
