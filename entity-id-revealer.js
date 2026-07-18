@@ -28,6 +28,16 @@
     root.appendChild(s);
   }
 
+  function observeWarning(el) {
+    if (el._erWatched) return;
+    el._erWatched = true;
+    var obs = new MutationObserver(function () {
+      patchWarning(el);
+    });
+    obs.observe(el, { childList: true, characterData: true, subtree: true });
+    el._erObserver = obs;
+  }
+
   function patchWarning(el) {
     var host = el.getRootNode().host;
     if (!host) {
@@ -43,6 +53,7 @@
     console.log("[er] patchWarning: entityId=" + entityId, el);
 
     if (el.tagName === "HUI-WARNING") {
+      observeWarning(el);
       var text = el.textContent || "";
       console.log("[er] HUI-WARNING text=" + text + " isNotFound=" + isNotFoundMessage(text) + " alreadyHasId=" + (text.indexOf(entityId) !== -1));
       if (isNotFoundMessage(text) && text.indexOf(entityId) === -1) {
@@ -64,7 +75,10 @@
   function scanForWarnings(root, label) {
     var warnings = root.querySelectorAll("hui-warning, hui-warning-element");
     console.log("[er] scanForWarnings(" + label + "): found " + warnings.length + " warnings, root:", root);
-    for (var i = 0; i < warnings.length; i++) patchWarning(warnings[i]);
+    for (var i = 0; i < warnings.length; i++) {
+      patchWarning(warnings[i]);
+      if (warnings[i].tagName === "HUI-WARNING") observeWarning(warnings[i]);
+    }
     var children = root.querySelectorAll("*");
     var shadowCount = 0;
     for (var i = 0; i < children.length; i++) {
@@ -91,7 +105,11 @@
       Cls.prototype.connectedCallback = function () {
         orig.apply(this, arguments);
         console.log("[er] connectedCallback(" + name + "): triggered, scheduling patchWarning");
-        setTimeout(patchWarning, 0, this);
+        var self = this;
+        var attempts = [0, 50, 200];
+        for (var a = 0; a < attempts.length; a++) {
+          setTimeout(patchWarning, attempts[a], self);
+        }
       };
       Cls.prototype.connectedCallback._erPatched = true;
       console.log("[er] patchElement(" + name + "): patched successfully (sync)");
