@@ -51,76 +51,26 @@
     }
   }
 
-  var observedRoots = [];
-
   function scanNode(node) {
     if (node.nodeType !== 1) return;
-    var tag = node.tagName;
-    if (tag === "HUI-WARNING" || tag === "HUI-WARNING-ELEMENT") {
+    if (node.tagName === "HUI-WARNING" || node.tagName === "HUI-WARNING-ELEMENT") {
       patchWarning(node);
     }
-    if (node.shadowRoot) {
-      observeRoot(node.shadowRoot);
-    }
+    if (node.shadowRoot) scanForWarnings(node.shadowRoot);
     var warnings = node.querySelectorAll("hui-warning, hui-warning-element");
-    for (var i = 0; i < warnings.length; i++) {
-      patchWarning(warnings[i]);
-    }
+    for (var i = 0; i < warnings.length; i++) patchWarning(warnings[i]);
     var all = node.querySelectorAll("*");
     for (var i = 0; i < all.length; i++) {
-      if (all[i].shadowRoot) {
-        observeRoot(all[i].shadowRoot);
-      }
+      if (all[i].shadowRoot) scanForWarnings(all[i].shadowRoot);
     }
   }
 
-  function observeRoot(root) {
-    if (root._erObserved) return;
-    root._erObserved = true;
-    observedRoots.push(root);
-
+  function scanForWarnings(root) {
     var warnings = root.querySelectorAll("hui-warning, hui-warning-element");
-    for (var i = 0; i < warnings.length; i++) {
-      patchWarning(warnings[i]);
-    }
-    var all = root.querySelectorAll("*");
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].shadowRoot) {
-        observeRoot(all[i].shadowRoot);
-      }
-    }
-
-    var observer = new MutationObserver(function (mutations) {
-      for (var i = 0; i < mutations.length; i++) {
-        var m = mutations[i];
-        if (m.type === "childList") {
-          for (var j = 0; j < m.addedNodes.length; j++) {
-            scanNode(m.addedNodes[j]);
-          }
-          for (var j = 0; j < m.removedNodes.length; j++) {
-            cleanupRemoved(m.removedNodes[j]);
-          }
-        } else if (m.type === "characterData") {
-          var p = m.target.parentElement;
-          if (p && (p.tagName === "HUI-WARNING" || p.tagName === "HUI-WARNING-ELEMENT")) {
-            patchWarning(p);
-          }
-        }
-      }
-    });
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
-  }
-
-  function cleanupRemoved(node) {
-    if (node.nodeType !== 1) return;
-    if (node.shadowRoot && node.shadowRoot._erObserved) {
-      observedRoots = observedRoots.filter(function (r) { return r !== node.shadowRoot; });
-    }
-    var all = node.querySelectorAll("*");
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].shadowRoot && all[i].shadowRoot._erObserved) {
-        observedRoots = observedRoots.filter(function (r) { return r !== all[i].shadowRoot; });
-      }
+    for (var i = 0; i < warnings.length; i++) patchWarning(warnings[i]);
+    var children = root.querySelectorAll("*");
+    for (var i = 0; i < children.length; i++) {
+      if (children[i].shadowRoot) scanForWarnings(children[i].shadowRoot);
     }
   }
 
@@ -135,17 +85,29 @@
   });
   lightObserver.observe(document.body, { childList: true, subtree: true });
 
-  function scanForWarnings(root) {
-    var warnings = root.querySelectorAll("hui-warning, hui-warning-element");
-    for (var i = 0; i < warnings.length; i++) patchWarning(warnings[i]);
-    var children = root.querySelectorAll("*");
-    for (var i = 0; i < children.length; i++) {
-      if (children[i].shadowRoot) {
-        observeRoot(children[i].shadowRoot);
-        scanForWarnings(children[i].shadowRoot);
-      }
+  function patchElement(name) {
+    var cls = customElements.get(name);
+    var patch = function () {
+      var Cls = customElements.get(name);
+      if (!Cls) return;
+      var orig = Cls.prototype.connectedCallback;
+      if (orig._erPatched) return;
+      Cls.prototype.connectedCallback = function () {
+        orig.apply(this, arguments);
+        var self = this;
+        setTimeout(function () { patchWarning(self); }, 0);
+      };
+      Cls.prototype.connectedCallback._erPatched = true;
+    };
+    if (cls) {
+      patch();
+    } else {
+      customElements.whenDefined(name).then(patch);
     }
   }
+
+  patchElement("hui-warning");
+  patchElement("hui-warning-element");
 
   scanForWarnings(document.body);
   setTimeout(function () { scanForWarnings(document.body); }, 500);
